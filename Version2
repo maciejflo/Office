@@ -1,0 +1,72 @@
+$RegPaths = @(
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+    "HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+$LogPath = "C:\Program Files\instlogs\PKG"
+$LogFile = Join-Path $LogPath "VisioProject_Removal_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+
+# Create log directory if it doesn't exist
+if (!(Test-Path $LogPath)) {
+    New-Item -Path $LogPath -ItemType Directory -Force | Out-Null
+}
+
+# Start logging
+"=== Visio and Project Removal Log ===" | Out-File $LogFile
+"Start Time: $(Get-Date)" | Out-File $LogFile -Append
+"" | Out-File $LogFile -Append
+
+Function Remove-OfficeApp {
+    param (
+        [string]$AppName
+    )
+    
+    "" | Out-File $LogFile -Append
+    "Searching for $AppName installations..." | Out-File $LogFile -Append
+    
+    $UninstallStrings = Get-ItemProperty $RegPaths -ErrorAction SilentlyContinue | 
+                        Where-Object {$_.DisplayName -like "*$AppName*"} | 
+                        Select-Object UninstallString
+
+    ForEach ($Record in $UninstallStrings) {
+        $RawString = $Record.UninstallString
+        
+        # Robust parsing: Check if string starts with a quote
+        if ($RawString -match '^"([^"]+)"\s+(.*)') {
+            $UninstallEXE = $Matches[1]
+            $ExistingArgs = $Matches[2]
+        } elseif ($RawString -match '^(\S+)\s+(.*)') {
+            # Handle unquoted paths (rare but possible)
+            $UninstallEXE = $Matches[1]
+            $ExistingArgs = $Matches[2]
+        } else {
+            "Could not parse string: $RawString" | Out-File $LogFile -Append
+            continue
+        }
+
+        # CHECK 1: Ensure we are using correct parameters for C2R
+        # We append ForceAppShutdown=True to prevent "Close Programs" dialogs
+        $UninstallArg = "$ExistingArgs DisplayLevel=False ForceAppShutdown=True"
+        
+        "Uninstalling: $AppName" | Out-File $LogFile -Append
+        "Command: $UninstallEXE $UninstallArg" | Out-File $LogFile -Append
+        
+        try {
+            # Start process and wait
+            $Process = Start-Process -FilePath $UninstallEXE -ArgumentList $UninstallArg -Wait -PassThru -ErrorAction Stop
+            "Exit Code: $($Process.ExitCode)" | Out-File $LogFile -Append
+        } catch {
+            "Error executing uninstall: $_" | Out-File $LogFile -Append
+        }
+    }
+}
+
+# Remove Visio
+Remove-OfficeApp -AppName "Visio"
+
+# Remove Project
+Remove-OfficeApp -AppName "Project"
+
+# End logging
+"" | Out-File $LogFile -Append
+"End Time: $(Get-Date)" | Out-File $LogFile -Append
+"Log saved to: $LogFile" | Out-File $LogFile -Append

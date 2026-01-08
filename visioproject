@@ -1,0 +1,43 @@
+$RegPaths = @(
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+    "HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+$LogPath = "C:\Program Files\instlogs\PKG"
+$LogFile = Join-Path $LogPath "VisioProject_Removal_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+
+# Create log directory if it doesn't exist
+if (!(Test-Path $LogPath)) {
+    New-Item -Path $LogPath -ItemType Directory -Force | Out-Null
+}
+
+# Start logging
+"=== Visio and Project Removal Log ===" | Out-File $LogFile
+"Start Time: $(Get-Date)" | Out-File $LogFile -Append
+"" | Out-File $LogFile -Append
+
+# Remove Visio
+"Removing Visio installations..." | Out-File $LogFile -Append
+$VisioUninstallStrings = (Get-ItemProperty $RegPaths -ErrorAction SilentlyContinue | Where {$_.DisplayName -like "*Visio*"} | Select UninstallString).UninstallString
+ForEach ($UninstallString in $VisioUninstallStrings) {
+    $UninstallEXE = ($UninstallString -split '"')[1]
+    $UninstallArg = ($UninstallString -split '"')[2] + " DisplayLevel=False"
+    "Uninstalling: $UninstallString" | Out-File $LogFile -Append
+    Start-Process -FilePath $UninstallEXE -ArgumentList $UninstallArg -Wait
+}
+
+# Remove Project
+"" | Out-File $LogFile -Append
+"Removing Project installations..." | Out-File $LogFile -Append
+$ProjectUninstallStrings = (Get-ItemProperty $RegPaths -ErrorAction SilentlyContinue | Where {$_.DisplayName -like "*Project*"} | Select UninstallString).UninstallString
+ForEach ($UninstallString in $ProjectUninstallStrings) {
+    $UninstallEXE = ($UninstallString -split '"')[1]
+    $UninstallArg = ($UninstallString -split '"')[2] + " DisplayLevel=False"
+    "Uninstalling: $UninstallString" | Out-File $LogFile -Append
+    Start-Process -FilePath $UninstallEXE -ArgumentList $UninstallArg -Wait
+}
+
+# End logging
+"" | Out-File $LogFile -Append
+"End Time: $(Get-Date)" | Out-File $LogFile -Append
+"Log saved to: $LogFile" | Out-File $LogFile -Append

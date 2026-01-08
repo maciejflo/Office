@@ -20,7 +20,7 @@ if (!(Test-Path $LogPath)) {
 $VisioUninstallStrings = (Get-ItemProperty $RegPaths -ErrorAction SilentlyContinue | Where {$_.DisplayName -like "*Visio*"} | Select UninstallString).UninstallString
 ForEach ($UninstallString in $VisioUninstallStrings) {
     $UninstallEXE = ($UninstallString -split '"')[1]
-    $UninstallArg = ($UninstallString -split '"')[2].Trim() + " /quiet"
+    $UninstallArg = ($UninstallString -split '"')[2].Trim() + " DisplayLevel=False"
     "Uninstalling: $UninstallString" | Out-File $LogFile -Append
     Start-Process -FilePath $UninstallEXE -ArgumentList $UninstallArg -Wait
 }
@@ -31,7 +31,7 @@ ForEach ($UninstallString in $VisioUninstallStrings) {
 $ProjectUninstallStrings = (Get-ItemProperty $RegPaths -ErrorAction SilentlyContinue | Where {$_.DisplayName -like "*Project*"} | Select UninstallString).UninstallString
 ForEach ($UninstallString in $ProjectUninstallStrings) {
     $UninstallEXE = ($UninstallString -split '"')[1]
-    $UninstallArg = ($UninstallString -split '"')[2].Trim() + " /quiet"
+    $UninstallArg = ($UninstallString -split '"')[2].Trim() + " DisplayLevel=False"
     "Uninstalling: $UninstallString" | Out-File $LogFile -Append
     Start-Process -FilePath $UninstallEXE -ArgumentList $UninstallArg -Wait
 }
